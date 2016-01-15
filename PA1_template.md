@@ -1,13 +1,9 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 ## Loading and preprocessing the data.
 #### Loading
-```{r message=FALSE}
+
+```r
 require("data.table")
 library(data.table)
 library(lattice)
@@ -33,17 +29,20 @@ if (!file.exists("Source_Classification_Code.rds")) {
 #### Preprocessing
 
 Read the .txt file into a data.table.  Change any strings with "NA" to the not-available type.
-```{r}
+
+```r
 dt_activity_raw <- fread("activity.csv", sep = ",", header = TRUE, na.strings = c("NA",""))
 ```
 
 Convert the "date" column from datatype "chr" to "date".
-```{r}
+
+```r
 dt_activity_raw$date <- as.Date(dt_activity_raw$date)
 ```
 
 Create a "clean" data set containing rows with non-NA values for "steps".
-```{r}
+
+```r
 dt_activity_no_na <- subset(dt_activity_raw, !is.na(steps))
 ```
 
@@ -54,7 +53,8 @@ dt_activity_no_na <- subset(dt_activity_raw, !is.na(steps))
 
 
 Calculate the SUM/MEAN of the steps by date and save to new data.table.
-```{r}
+
+```r
 dt_activity_datesummary <- summaryBy(
     steps ~ date, 
     data = dt_activity_no_na, 
@@ -64,7 +64,8 @@ dt_activity_datesummary <- summaryBy(
 
 
 Histogram of the total number of steps taken each day
-```{r}
+
+```r
 hist(dt_activity_datesummary$steps.sum
     ,xlab = "Steps Per Day"
     ,ylab = "Frequency"
@@ -72,9 +73,12 @@ hist(dt_activity_datesummary$steps.sum
     )
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-6-1.png)\
+
 
 Calculate the mean and meadian number of steps taken each day
-```{r}
+
+```r
 CentralTendencies <- matrix(
     c(mean(dt_activity_no_na$steps), median(dt_activity_no_na$steps), nrow(dt_activity_no_na))
     ,ncol=3,byrow=TRUE
@@ -85,6 +89,11 @@ CentralTendencies <- as.table(CentralTendencies)
 CentralTendencies
 ```
 
+```
+##                Mean Steps Median Steps   Rowcount
+## Non-NA Dataset    37.3826       0.0000 15264.0000
+```
+
 
 
 ## What is the average daily activity pattern?
@@ -92,7 +101,8 @@ CentralTendencies
 
 
 Calculate the SUM/MEAN of the steps by time and save to new data.table.
-```{r}
+
+```r
 dt_activity_timesummary <- summaryBy(
     steps ~ interval, 
     data = dt_activity_no_na, 
@@ -101,7 +111,8 @@ dt_activity_timesummary <- summaryBy(
 ```
 
 Time series plot of the average number of steps taken
-```{r}
+
+```r
 plot(
     x = dt_activity_timesummary$interval
     , y = dt_activity_timesummary$steps.mean
@@ -111,9 +122,17 @@ plot(
 )
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-9-1.png)\
+
 Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
-```{r}
+
+```r
 dt_activity_timesummary[which.max(steps.mean)]
+```
+
+```
+##    interval steps.sum steps.mean
+## 1:      835     10927   206.1698
 ```
 
 
@@ -123,22 +142,29 @@ dt_activity_timesummary[which.max(steps.mean)]
 
 
 Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs).
-```{r}
+
+```r
 nrow(dt_activity_raw[is.na(steps)==1,])
+```
+
+```
+## [1] 2304
 ```
 ### Devise a strategy for filling in all of the missing values in the dataset. 
 
 The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
 
 Create a new "steps" column (steps_ascr) to which we will ascribe values where they are missing.
-```{r}
+
+```r
 dt_activity_raw$steps_ascr = as.numeric(dt_activity_raw$steps)
 ```
 
 
 From the raw data, identify and record a vector of row pointers where there are missing values in "Steps" column.  
 This can be used to tell us which rows need updating.
-```{r}
+
+```r
 missing_steps <- which(is.na(dt_activity_raw$steps)==1)
 ```
 
@@ -146,20 +172,23 @@ missing_steps <- which(is.na(dt_activity_raw$steps)==1)
 Now loop through each row pointer, looking up each row's "interval" value.  
 Then go lookup the average for that interval already recorded in data table dt_activity_timesummary.
 Then copy that average to the new "steps_ascr" column.
-```{r}
+
+```r
 for(i in 1:length(missing_steps)) {
     dt_activity_raw[missing_steps[i]]$steps_ascr <- dt_activity_timesummary[interval==dt_activity_raw[missing_steps[i],interval], steps.mean]
 }
 ```
 
-Create a new dataset that is equal in rowcount to the raw dataset, but has fewer columns.
-```{r}
+Create a new dataset that is equal in rowcount to the original dataset. 
+
+```r
 dt_activity_ascr <- dt_activity_raw[,.(steps_ascr, date, interval)]
 colnames(dt_activity_ascr)[1] <- "steps"
 ```
 
 Make a histogram of the total number of steps taken each day and 
-```{r}
+
+```r
 dt_activity_ascr_datesummary <- summaryBy(
     steps ~ date, 
     data = dt_activity_ascr, 
@@ -167,8 +196,10 @@ dt_activity_ascr_datesummary <- summaryBy(
     FUN = c(sum,mean,median))
 ```
 
-Create a multi-plot of 2 histograms illustrating how the additional data supplied from the ascribed step values increased the frequency in the "10K-15K Steps Per Day" range. The data where the NA were replaced with interval-means has increased the volume of data included in the 10000-15000 range. 
-```{r}
+Create a multi-plot of 2 histograms illustrating how the additional data supplied from the ascribed step values increased the frequency in the "10K-15K Steps Per Day" range.
+The ascription m.
+
+```r
 par(mfrow = c(2, 1))    
 
 hist(dt_activity_datesummary$steps.sum
@@ -183,10 +214,11 @@ hist(dt_activity_ascr_datesummary$steps.sum
 )
 ```
 
-Calculate and report the mean and median total number of steps taken per day.  
-Notice that even though we increase the number valid rows in the Non-NA data set, it
-had no change on the overall average of steps.
-```{r}
+![](PA1_template_files/figure-html/unnamed-chunk-17-1.png)\
+
+### Calculate and report the mean and median total number of steps taken per day.
+
+```r
 CentralTendencies <- matrix(
     c(
     mean(dt_activity_no_na$steps), median(dt_activity_no_na$steps), nrow(dt_activity_no_na),
@@ -200,6 +232,12 @@ CentralTendencies <- as.table(CentralTendencies)
 CentralTendencies
 ```
 
+```
+##                     Mean Steps Median Steps   Rowcount
+## Non-NA Dataset         37.3826       0.0000 15264.0000
+## NA-Ascribed Dataset    37.3826       0.0000 17568.0000
+```
+
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
@@ -207,25 +245,26 @@ CentralTendencies
 
 
 Create and assign a dayofweek column.
-```{r}
+
+```r
 dt_activity_ascr$dayofweek  <- weekdays(dt_activity_ascr$date)
 ```
 
 Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
-```{r}
+
+```r
 dt_activity_ascr$daytype <- ifelse(dt_activity_ascr$dayofweek=="Saturday" | dt_activity_ascr$dayofweek=="Sunday","Weekend", "Weekday")
 ```
 
 Aggregate the Steps by Interval and DayType
-```{r}
+
+```r
 dt_activity_ascr_timesummary_intervalbydaytype <- summaryBy(
     steps ~ interval | daytype, 
     data = dt_activity_ascr, 
     keep.names = FALSE, 
     FUN = c(sum,mean))
-```
 
-On Weekdays, there is clearly a movement spike in the 08:00-09:30 window, whereas the Weekends are slightly more distributed.
 xyplot(steps.mean ~ interval | daytype
     ,data = dt_activity_ascr_timesummary_intervalbydaytype
     ,type ="l"
@@ -233,3 +272,5 @@ xyplot(steps.mean ~ interval | daytype
     ,ylab = "Average Number of Steps"
     )
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-21-1.png)\
